@@ -139,7 +139,7 @@ export const LEVELS: LevelDef[] = [
     harvest: {
       fruit: "golden-pear",
       label: "the golden pear",
-      durationMs: 12_000,
+      durationMs: 10_000,
       spawnCount: 1,
       pointsPerItem: 250,
     },
