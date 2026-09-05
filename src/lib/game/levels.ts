@@ -137,8 +137,8 @@ export const LEVELS: LevelDef[] = [
       hint: "Draw something that floats and carries you.",
     },
     harvest: {
-      fruit: "golden-pear",
-      label: "the golden pear",
+      fruit: "watermelon",
+      label: "the watermelon",
       durationMs: 10_000,
       spawnCount: 1,
       pointsPerItem: 250,

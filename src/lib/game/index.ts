@@ -9,6 +9,8 @@ export {
   createHybridGenerator,
   PREBAKED_MODELS,
   CHARACTER_MODEL,
+  FRUIT_MODELS,
+  fruitModelFor,
   type PrebakedOptions,
 } from "./prebakedModels";
 export {
