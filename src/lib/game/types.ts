@@ -7,7 +7,7 @@
 
 export type ObstacleId = "river" | "crest" | "lake";
 export type ToolId = "bridge" | "ladder" | "boat";
-export type FruitId = "strawberry" | "blueberry" | "golden-pear";
+export type FruitId = "strawberry" | "blueberry" | "watermelon";
 
 /**
  * Where the player is in a single level.
