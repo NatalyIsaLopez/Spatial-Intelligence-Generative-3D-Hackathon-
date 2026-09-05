@@ -1,30 +1,45 @@
 import './sketchbook.css';
 
-const BOOK_ICON_SVG = `
+// A small sleeping owl perched on a branch — the closed/idle icon. Wakes up
+// (see OWL_AWAKE_SVG) once the glade opens, a tiny bit of storytelling.
+const OWL_SLEEPING_SVG = `
 <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-  <rect x="6" y="7" width="36" height="34" rx="3" fill="#f4e8cf" />
-  <rect x="6" y="7" width="15" height="34" rx="3" fill="#6b3f26" />
-  <rect x="20" y="7" width="2" height="34" fill="#4a3728" opacity="0.35" />
-  <path d="M27 7 h5 v18 l-2.5 -3 l-2.5 3 z" fill="#c97b63" />
-  <line x1="26" y1="16" x2="38" y2="16" stroke="#8c5a3c" stroke-width="1.4" opacity="0.6"/>
-  <line x1="26" y1="21" x2="38" y2="21" stroke="#8c5a3c" stroke-width="1.4" opacity="0.6"/>
-  <line x1="26" y1="26" x2="34" y2="26" stroke="#8c5a3c" stroke-width="1.4" opacity="0.6"/>
+  <path d="M7 41 Q24 37 41 41" stroke="#6b4a33" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <ellipse cx="24" cy="27" rx="14" ry="15" fill="#6f8f68"/>
+  <ellipse cx="24" cy="31" rx="9" ry="9" fill="#efe6cb"/>
+  <circle cx="24" cy="16" r="11" fill="#5c8a52"/>
+  <path d="M15 9 L18 15 L12 14 Z" fill="#5c8a52"/>
+  <path d="M33 9 L30 15 L36 14 Z" fill="#5c8a52"/>
+  <path d="M17 16 Q19.5 18.2 22 16" stroke="#33502f" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <path d="M26 16 Q28.5 18.2 31 16" stroke="#33502f" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <path d="M22.5 20 L24 23.5 L25.5 20 Z" fill="#e8b84b"/>
 </svg>`;
 
-const CORNER_SVG = `
-<svg viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg">
-  <path d="M2 2 Q2 16 16 16" stroke="#d9b25f" stroke-width="2" fill="none" opacity="0.8"/>
-  <path d="M2 2 Q2 9 9 9" stroke="#eccf8b" stroke-width="1.4" fill="none" opacity="0.7"/>
+// The awake owl, perched atop the glade panel once it's open — watching over the sketch.
+const OWL_AWAKE_SVG = `
+<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20 46 Q13 58 20 72" stroke="#456b40" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M60 46 Q67 58 60 72" stroke="#456b40" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <ellipse cx="40" cy="48" rx="22" ry="24" fill="#6f8f68"/>
+  <ellipse cx="40" cy="54" rx="14" ry="15" fill="#f3ead0"/>
+  <circle cx="40" cy="28" r="18" fill="#5c8a52"/>
+  <path d="M24 14 L30 26 L19 24 Z" fill="#5c8a52"/>
+  <path d="M56 14 L50 26 L61 24 Z" fill="#5c8a52"/>
+  <circle cx="32" cy="27" r="7.4" fill="#fff8ea"/>
+  <circle cx="48" cy="27" r="7.4" fill="#fff8ea"/>
+  <circle cx="32" cy="27" r="3.6" fill="#2f2115"/>
+  <circle cx="48" cy="27" r="3.6" fill="#2f2115"/>
+  <circle cx="33.4" cy="25.6" r="1.1" fill="#fff8ea"/>
+  <circle cx="49.4" cy="25.6" r="1.1" fill="#fff8ea"/>
+  <path d="M37 32 L40 37.5 L43 32 Z" fill="#e8b84b"/>
 </svg>`;
 
-const QUILL_SVG = `
-<svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="30" cy="78" rx="18" ry="7" fill="#4a3728" opacity="0.15"/>
-  <path d="M28 76 C24 60 30 34 60 12 C64 24 66 40 56 54 C46 68 34 74 28 76 Z" fill="#7a4a2e"/>
-  <path d="M60 12 C58 22 52 36 40 48" stroke="#eccf8b" stroke-width="2" fill="none" opacity="0.6"/>
-  <path d="M28 76 L20 88" stroke="#4a3728" stroke-width="2.5" stroke-linecap="round"/>
-  <ellipse cx="70" cy="82" rx="14" ry="10" fill="#4a3728"/>
-  <ellipse cx="70" cy="79" rx="11" ry="6" fill="#2f2115"/>
+// Small leaf sprig ornaments, replacing the old book's gold corner flourishes.
+const LEAF_SVG = `
+<svg viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+  <path d="M2 28 Q6 14 20 4" stroke="#5c8a52" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="9" cy="19" rx="5" ry="2.6" fill="#7ea86f" transform="rotate(-35 9 19)"/>
+  <ellipse cx="16" cy="10" rx="4" ry="2.2" fill="#8fbb7e" transform="rotate(-35 16 10)"/>
 </svg>`;
 
 const ML5_SRC = 'https://unpkg.com/ml5@1/dist/ml5.min.js';
@@ -48,9 +63,9 @@ const CONFIDENCE_THRESHOLD = 0.15;
 const HINT_CONFIDENCE_FLOOR = 0.04;
 
 const FLAVOR_LINES = [
-  'What does this place need to feel whole again?',
-  'Something here is unfinished. Draw what belongs.',
-  'Close your eyes, and sketch what you saw.',
+  'The owl watches. Draw what belongs here.',
+  'Something in this glade is unfinished.',
+  'Sketch the missing item!',
 ];
 
 let ml5LoadPromise = null;
@@ -69,8 +84,9 @@ function loadMl5Once() {
 }
 
 /**
- * A book-styled sketchbook UI: a corner icon that opens into an overlay with
- * a blank drawing page. Deliberately reveals nothing about what the player
+ * A forest-glade sketch UI: a sleeping owl icon that opens into a
+ * firefly-lit clearing where an awake owl companion watches over a single
+ * blank drawing page. Deliberately reveals nothing about what the player
  * is supposed to draw — that's discovered by talking to NPCs elsewhere in
  * the game. The host tells this component what currently counts as correct
  * via `setExpectedShape(name)`; everything else (which level, in what
@@ -170,7 +186,7 @@ export class Sketchbook {
     root.className = 'sb-root';
 
     root.innerHTML = `
-      <button class="sb-icon-btn" type="button" aria-label="Open sketchbook">${BOOK_ICON_SVG}</button>
+      <button class="sb-icon-btn" type="button" aria-label="Open sketchbook">${OWL_SLEEPING_SVG}</button>
       <div class="sb-overlay"></div>
     `;
 
@@ -181,54 +197,44 @@ export class Sketchbook {
 
     this._spawnMotes();
 
-    const book = document.createElement('div');
-    book.className = 'sb-book';
-    book.setAttribute('role', 'dialog');
-    book.setAttribute('aria-label', 'Sketchbook');
-    book.innerHTML = `
+    const glade = document.createElement('div');
+    glade.className = 'sb-glade';
+    glade.setAttribute('role', 'dialog');
+    glade.setAttribute('aria-label', 'Sketch glade');
+    glade.innerHTML = `
       <div class="sb-dev-bar">
         <span class="sb-dev-label">dev:</span>
         <div class="sb-dev-tabs"></div>
         <span class="sb-dev-expected"></span>
       </div>
-      <button class="sb-close-btn" type="button" aria-label="Close sketchbook">✕</button>
-      <div class="sb-ribbon"></div>
-      <div class="sb-corner sb-corner-tl">${CORNER_SVG}</div>
-      <div class="sb-corner sb-corner-tr">${CORNER_SVG}</div>
-      <div class="sb-corner sb-corner-bl">${CORNER_SVG}</div>
-      <div class="sb-corner sb-corner-br">${CORNER_SVG}</div>
-      <div class="sb-pages">
-        <div class="sb-page sb-page-left">
-          <div class="sb-doodle">${QUILL_SVG}</div>
-          <p class="sb-flavor"></p>
-        </div>
-        <div class="sb-page sb-page-right">
-          <div class="sb-page-header"><span class="sb-quill-mark">✒</span></div>
-          <div class="sb-status"></div>
-          <div class="sb-canvas-wrap sb-empty">
-            <canvas></canvas>
-          </div>
-          <div class="sb-controls">
-            <button class="sb-btn sb-clear-btn" type="button">Start Over</button>
-            <button class="sb-btn sb-primary sb-submit-btn" type="button">Bring It to Life</button>
-          </div>
-        </div>
+      <button class="sb-close-btn" type="button" aria-label="Close">✕</button>
+      <div class="sb-leaf sb-leaf-tl">${LEAF_SVG}</div>
+      <div class="sb-leaf sb-leaf-tr">${LEAF_SVG}</div>
+      <div class="sb-owl-perch">${OWL_AWAKE_SVG}</div>
+      <p class="sb-flavor"></p>
+      <div class="sb-status"></div>
+      <div class="sb-canvas-wrap sb-empty">
+        <canvas></canvas>
+      </div>
+      <div class="sb-controls">
+        <button class="sb-btn sb-clear-btn" type="button">Start Over</button>
+        <button class="sb-btn sb-primary sb-submit-btn" type="button">Bring It to Life</button>
       </div>
     `;
-    this.overlay.appendChild(book);
+    this.overlay.appendChild(glade);
 
-    this.book = book;
-    this.devTabsEl = book.querySelector('.sb-dev-tabs');
-    this.devExpectedEl = book.querySelector('.sb-dev-expected');
-    this.flavorEl = book.querySelector('.sb-flavor');
+    this.glade = glade;
+    this.devTabsEl = glade.querySelector('.sb-dev-tabs');
+    this.devExpectedEl = glade.querySelector('.sb-dev-expected');
+    this.flavorEl = glade.querySelector('.sb-flavor');
     this.flavorEl.textContent = FLAVOR_LINES[Math.floor(Math.random() * FLAVOR_LINES.length)];
-    this.statusEl = book.querySelector('.sb-status');
-    this.canvasWrap = book.querySelector('.sb-canvas-wrap');
-    this.canvas = book.querySelector('canvas');
+    this.statusEl = glade.querySelector('.sb-status');
+    this.canvasWrap = glade.querySelector('.sb-canvas-wrap');
+    this.canvas = glade.querySelector('canvas');
     this.ctx = this.canvas.getContext('2d');
-    this.clearBtn = book.querySelector('.sb-clear-btn');
-    this.submitBtn = book.querySelector('.sb-submit-btn');
-    this.closeBtn = book.querySelector('.sb-close-btn');
+    this.clearBtn = glade.querySelector('.sb-clear-btn');
+    this.submitBtn = glade.querySelector('.sb-submit-btn');
+    this.closeBtn = glade.querySelector('.sb-close-btn');
 
     root.classList.toggle('sb-dev', this.devMode);
   }
