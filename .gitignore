@@ -7,3 +7,17 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# macOS
+.DS_Store
+
+# Unity generated files
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Bb]uild/
+unity/[Bb]uilds/
+unity/[Ll]ogs/
+unity/[Uu]ser[Ss]ettings/
+unity/MemoryCaptures/
+unity/.vscode/
