@@ -31,7 +31,7 @@ export const BUSH_MODEL = "/artifacts/bush.glb";
 export const FRUIT_MODELS: Record<FruitId, string> = {
   strawberry: "/artifacts/strawberry.glb",
   blueberry: "/artifacts/persimmon.glb",
-  watermelon: "/artifacts/persimmon.glb",
+  watermelon: "/artifacts/melon.glb",
 };
 
 /** Model for the fruit on a given level, or null outside a level. */
