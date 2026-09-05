@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Mending — MVP</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <canvas id="sketch" width="1" height="1"></canvas>
+
+    <div id="hud">
+      <div id="status">Draw the missing piece to cross the gap.</div>
+      <div id="controls">
+        <button id="drawBtn">Draw</button>
+        <button id="submitBtn" disabled>Submit Drawing</button>
+        <button id="clearBtn" disabled>Clear</button>
+        <span id="templateControls">
+          <button id="recordBtn">Record Template Mode</button>
+          <span id="templateCount"></span>
+        </span>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
