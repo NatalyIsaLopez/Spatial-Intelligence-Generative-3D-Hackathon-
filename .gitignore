@@ -21,3 +21,8 @@ unity/[Ll]ogs/
 unity/[Uu]ser[Ss]ettings/
 unity/MemoryCaptures/
 unity/.vscode/
+
+# Unity IDE-generated project files
+unity/*.csproj
+unity/*.sln
+unity/*.slnx
