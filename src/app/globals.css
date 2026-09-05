@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-void: #07070b;
+  --color-panel: #0f1017;
+  --color-edge: #23252f;
+  --color-mint: #4fe3b0;
+  --color-mint-dim: #2a8f6e;
+}
+
+html,
+body {
+  background: var(--color-void);
+  color: #e8e9ef;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Slow drift behind the hero so an empty stage still feels alive. */
+@keyframes drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -12px, 0) scale(1.04); }
+}
+
+.drift {
+  animation: drift 9s ease-in-out infinite;
+}
