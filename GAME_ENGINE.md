@@ -1,8 +1,5 @@
 # Spatial Forge — game engine
 
-The full game loop as a state machine. No React, no DOM, no Mint calls inside
-the core: your teammates can build any interface on top and the rules stay put.
-
 ## Where the files go
 
 Copy these into your repo, keeping the paths:
@@ -19,7 +16,7 @@ src/hooks/useGame.ts         React binding
 scripts/playthrough.ts       headless test of the whole loop
 ```
 
-## Prove it works before touching the UI
+## Pre UI build
 
 ```bash
 npx tsx scripts/playthrough.ts
@@ -106,28 +103,6 @@ Everything the interface needs is on `state`:
 The hook also gives you `harvestProgress` (1 → 0) for a timer ring, and
 `secondsLeft` already rounded for display.
 
-### Building UI without burning Mint credits
-
-```tsx
-const game = useGame({ live: false, skipTraversal: true });
-```
-
-`live: false` returns a placeholder URL after ~900ms instead of calling Mint.
-`skipTraversal` jumps straight past the crossing animation.
-
-## Wiring the sketchbook
-
-Your teammate's sketchbook needs to end up producing a text prompt, since Mint
-generates from text. Whatever the drawing surface is, the handoff is one call:
-
-```ts
-submitSketch("a wooden bridge");
-```
-
-If the sketchbook is purely visual with no text field, the simplest bridge is a
-label input next to the canvas — the player draws *and* names it. That also
-makes validation honest, since you are checking what they meant to draw.
-
 ## Tuning the levels
 
 Everything lives in `src/lib/game/levels.ts`. Change a timer, a fruit count, or
@@ -157,12 +132,3 @@ This is where the game teaches its own logic, so it's worth expanding.
 A fourth level is just a fourth entry in the array. The engine reads the array
 length.
 
-## One thing to check on first run
-
-`mintBridge.ts` guesses at the JSON shape your `/api/generate` and
-`/api/operations/[id]` routes return, because I wrote it without seeing those
-files. If a generation fails with "could not find an operation id" or "could not
-find a model URL", open the network tab, look at the real response, and add the
-correct key to `OPERATION_ID_KEYS` or `URL_KEYS` near the bottom of that file.
-It already handles flat `url` fields, `assets` arrays, and format-keyed maps, so
-there's a good chance it works untouched.
