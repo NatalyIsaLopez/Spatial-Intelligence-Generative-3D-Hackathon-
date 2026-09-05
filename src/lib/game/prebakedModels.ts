@@ -7,7 +7,8 @@ import { validateSketch } from "./validate";
  * Pre-generated models, served from public/artifacts.
  *
  * Live Mint generation is the real feature, but it takes time and depends on
- * the API being up. 
+ * the API being up. This gives you the same game with instant, guaranteed
+ * models — worth having on the day you demo.
  */
 export const PREBAKED_MODELS: Record<ToolId, string> = {
   bridge: "/artifacts/bridge.glb",
@@ -17,11 +18,15 @@ export const PREBAKED_MODELS: Record<ToolId, string> = {
 
 export const CHARACTER_MODEL = "/artifacts/character.glb";
 
+/** The bush the fruit grows on, shown during the harvest. */
+export const BUSH_MODEL = "/artifacts/bush.glb";
+
 /**
  * Fruit models, keyed by the FruitId in levels.ts.
  *
- * Only the persimmon exists so far, so all three point at it. When a real
- * strawberry or blueberry lands in public/artifact, easily replaceable
+ * Blueberry and watermelon fall back to the persimmon until their own
+ * models exist. Swap a single line when one lands in public/artifacts —
+ * nothing else in the game needs to know.
  */
 export const FRUIT_MODELS: Record<FruitId, string> = {
   strawberry: "/artifacts/strawberry.glb",
@@ -35,7 +40,7 @@ export function fruitModelFor(fruit: FruitId | undefined): string | null {
 }
 
 export interface PrebakedOptions {
-
+  /** Fake thinking time in ms, so the generating phase is still visible. */
   delayMs?: number;
 }
 
