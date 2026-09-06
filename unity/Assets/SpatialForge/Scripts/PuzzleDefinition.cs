@@ -12,6 +12,9 @@ public sealed class PuzzleDefinition
     public string solutionLabel = "a bridge";
     public string rewardId = "strawberry";
     public string rewardLabel = "strawberries";
+    public string approachHint = "Press E or use the sketchbook button to imagine a way forward.";
+    public string revealedHint = "The sketch is real now. Move through the changed world and collect the fruit.";
+    public string lockedHint = "Something later in the journey is waiting for another fruit first.";
     public GameObject solutionObject;
     public GameObject rewardObject;
 }

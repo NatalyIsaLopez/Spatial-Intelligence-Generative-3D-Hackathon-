@@ -11,21 +11,29 @@ public sealed class SketchbookController : MonoBehaviour
     [SerializeField] private Text feedbackText;
     [SerializeField] private Text bridgeChoiceLabel;
 
-    private PuzzleRuntime runtime;
+    private PuzzleRuntime availableRuntime;
+    private PuzzleRuntime currentRuntime;
+    private bool initialized;
 
-    public void Initialize(PuzzleRuntime puzzleRuntime)
+    public void Initialize()
     {
-        runtime = puzzleRuntime;
+        if (initialized)
+        {
+            return;
+        }
 
-        if (openButton != null) openButton.onClick.AddListener(runtime.OpenSketchbook);
-        if (closeButton != null) closeButton.onClick.AddListener(runtime.CloseSketchbook);
-        if (bridgeChoiceButton != null) bridgeChoiceButton.onClick.AddListener(() => runtime.SubmitSolution("bridge"));
+        initialized = true;
+        if (openButton != null) openButton.onClick.AddListener(OpenAvailablePuzzle);
+        if (closeButton != null) closeButton.onClick.AddListener(CloseCurrentPuzzle);
+        if (bridgeChoiceButton != null) bridgeChoiceButton.onClick.AddListener(SubmitCurrentSolution);
 
         Hide();
+        SetOpenAvailable(false);
     }
 
-    public void Show(PuzzleDefinition puzzle)
+    public void Show(PuzzleRuntime runtime, PuzzleDefinition puzzle)
     {
+        currentRuntime = runtime;
         if (panel != null) panel.SetActive(true);
         if (storyPrompt != null) storyPrompt.text = puzzle.prompt;
         if (feedbackText != null) feedbackText.text = "";
@@ -35,6 +43,20 @@ public sealed class SketchbookController : MonoBehaviour
     public void Hide()
     {
         if (panel != null) panel.SetActive(false);
+    }
+
+    public void SetAvailableRuntime(PuzzleRuntime runtime, bool available)
+    {
+        if (available)
+        {
+            availableRuntime = runtime;
+        }
+        else if (availableRuntime == runtime)
+        {
+            availableRuntime = null;
+        }
+
+        SetOpenAvailable(availableRuntime != null);
     }
 
     public void SetOpenAvailable(bool available)
@@ -55,5 +77,29 @@ public sealed class SketchbookController : MonoBehaviour
     public void ShowFeedback(string message)
     {
         if (feedbackText != null) feedbackText.text = message;
+    }
+
+    private void OpenAvailablePuzzle()
+    {
+        if (availableRuntime != null)
+        {
+            availableRuntime.OpenSketchbook();
+        }
+    }
+
+    private void CloseCurrentPuzzle()
+    {
+        if (currentRuntime != null)
+        {
+            currentRuntime.CloseSketchbook();
+        }
+    }
+
+    private void SubmitCurrentSolution()
+    {
+        if (currentRuntime != null)
+        {
+            currentRuntime.SubmitSolution(currentRuntime.CurrentPuzzle.solutionId);
+        }
     }
 }

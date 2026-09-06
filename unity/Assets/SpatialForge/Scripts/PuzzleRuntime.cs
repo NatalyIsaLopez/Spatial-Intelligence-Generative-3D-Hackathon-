@@ -7,10 +7,13 @@ public sealed class PuzzleRuntime : MonoBehaviour
     [SerializeField] private PuzzleDefinition puzzle = new PuzzleDefinition();
     [SerializeField] private PlayerController player;
     [SerializeField] private SketchbookController sketchbook;
+    [SerializeField] private AdventureProgress progress;
     [SerializeField] private GameObject gapBlocker;
     [SerializeField] private Text statusText;
     [SerializeField] private Text hudText;
+    [SerializeField] private string requiredRewardId;
 
+    private bool playerInZone;
     private bool puzzleAvailable;
     private bool solutionRevealed;
     private bool completed;
@@ -26,14 +29,19 @@ public sealed class PuzzleRuntime : MonoBehaviour
         if (puzzle.solutionObject != null) puzzle.solutionObject.SetActive(false);
         if (puzzle.rewardObject != null) puzzle.rewardObject.SetActive(false);
         if (gapBlocker != null) gapBlocker.SetActive(true);
-        if (sketchbook != null) sketchbook.Initialize(this);
+        if (sketchbook != null) sketchbook.Initialize();
 
         SetCursorForPlay();
-        RefreshStatus();
+        RefreshSketchbookAvailability();
     }
 
     private void Update()
     {
+        if (playerInZone)
+        {
+            UpdateAvailability();
+        }
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null)
         {
@@ -52,15 +60,8 @@ public sealed class PuzzleRuntime : MonoBehaviour
 
     public void SetPuzzleAvailable(bool available)
     {
-        if (completed)
-        {
-            puzzleAvailable = false;
-        }
-        else
-        {
-            puzzleAvailable = available;
-        }
-
+        playerInZone = available;
+        UpdateAvailability();
         RefreshStatus();
     }
 
@@ -74,7 +75,7 @@ public sealed class PuzzleRuntime : MonoBehaviour
         IsSketchbookOpen = true;
         if (player != null) player.SetMovementEnabled(false);
         SetCursorForUi();
-        sketchbook.Show(puzzle);
+        sketchbook.Show(this, puzzle);
         RefreshStatus();
     }
 
@@ -84,6 +85,7 @@ public sealed class PuzzleRuntime : MonoBehaviour
         if (player != null) player.SetMovementEnabled(true);
         SetCursorForPlay();
         if (sketchbook != null) sketchbook.Hide();
+        RefreshSketchbookAvailability();
         RefreshStatus();
     }
 
@@ -101,7 +103,7 @@ public sealed class PuzzleRuntime : MonoBehaviour
         }
         else if (sketchbook != null)
         {
-            sketchbook.ShowFeedback("That idea belongs to another place. Try the sketch that holds still across water.");
+            sketchbook.ShowFeedback("That idea belongs to another place. Try the sketch this obstacle is asking for.");
         }
     }
 
@@ -115,6 +117,8 @@ public sealed class PuzzleRuntime : MonoBehaviour
         completed = true;
         puzzleAvailable = false;
         if (puzzle.rewardObject != null) puzzle.rewardObject.SetActive(false);
+        if (progress != null) progress.RecordFruit(puzzle.rewardId);
+        RefreshSketchbookAvailability();
         RefreshStatus();
     }
 
@@ -124,7 +128,27 @@ public sealed class PuzzleRuntime : MonoBehaviour
         if (puzzle.solutionObject != null) puzzle.solutionObject.SetActive(true);
         if (gapBlocker != null) gapBlocker.SetActive(false);
         if (puzzle.rewardObject != null) puzzle.rewardObject.SetActive(true);
+        UpdateAvailability();
         RefreshStatus();
+    }
+
+    private void UpdateAvailability()
+    {
+        puzzleAvailable = playerInZone && !completed && !solutionRevealed && HasRequiredReward();
+        RefreshSketchbookAvailability();
+    }
+
+    private bool HasRequiredReward()
+    {
+        return string.IsNullOrEmpty(requiredRewardId) || progress == null || progress.HasFruit(requiredRewardId);
+    }
+
+    private void RefreshSketchbookAvailability()
+    {
+        if (sketchbook != null)
+        {
+            sketchbook.SetAvailableRuntime(this, puzzleAvailable && !IsSketchbookOpen);
+        }
     }
 
     private void RefreshStatus()
@@ -137,30 +161,29 @@ public sealed class PuzzleRuntime : MonoBehaviour
             }
             else if (solutionRevealed)
             {
-                statusText.text = "The " + puzzle.solutionLabel + " is real now. Cross the stream and collect the " + puzzle.rewardLabel + ".";
+                statusText.text = puzzle.revealedHint;
             }
             else if (IsSketchbookOpen)
             {
                 statusText.text = "The sketchbook is open. Choose the idea the character imagines.";
             }
+            else if (playerInZone && !HasRequiredReward())
+            {
+                statusText.text = puzzle.lockedHint;
+            }
             else if (puzzleAvailable)
             {
-                statusText.text = "Press E or use the sketchbook button to imagine a way across.";
+                statusText.text = puzzle.approachHint;
             }
-            else
+            else if (playerInZone)
             {
-                statusText.text = "Explore the path. The stream ahead is too quick to step through.";
+                statusText.text = "You can wander away or keep exploring the path.";
             }
         }
 
         if (hudText != null)
         {
-            hudText.text = completed ? "Level 1 complete" : "Level 1: " + puzzle.levelName;
-        }
-
-        if (sketchbook != null)
-        {
-            sketchbook.SetOpenAvailable(puzzleAvailable && !IsSketchbookOpen && !solutionRevealed && !completed);
+            hudText.text = completed ? puzzle.levelName + " complete" : puzzle.levelName;
         }
     }
 
