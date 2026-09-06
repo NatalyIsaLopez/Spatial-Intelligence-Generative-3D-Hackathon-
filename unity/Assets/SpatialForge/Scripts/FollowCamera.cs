@@ -3,9 +3,9 @@ using UnityEngine;
 public sealed class FollowCamera : MonoBehaviour
 {
     [SerializeField] private Transform target;
-    [SerializeField] private Vector3 offset = new Vector3(0f, 6f, -8f);
+    [SerializeField] private Vector3 offset = new Vector3(0f, 3.6f, -7.6f);
     [SerializeField] private float positionSmoothTime = 0.12f;
-    [SerializeField] private float lookHeight = 1.1f;
+    [SerializeField] private float lookHeight = 1.35f;
 
     private Vector3 velocity;
 
