@@ -1,42 +1,33 @@
 "use client";
 
 /**
- * Spatial Forge — playable screen.
+ * Spatial Forge — the game screen.
  *
- * The sketchbook is deliberately absent: submitting is a single call to
- * submitSketch(prompt), and the caption field below is a stand-in for it.
- * Replace that one input when the real sketchbook lands.
+ * The 3D world fills the viewport; everything here is HUD layered over it.
+ * The sketchbook is deliberately absent: submitting is one call to
+ * submitSketch(prompt), and the caption field stands in for it.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Script from "next/script";
+import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
 import { useGame } from "@/hooks/useGame";
-import { useCharacterPose } from "@/hooks/useCharacterPose";
-import {
-  CHARACTER_MODEL,
-  PREBAKED_MODELS,
-  createPrebakedGenerator,
-  fruitModelFor,
-} from "@/lib/game";
-import type { ObstacleId } from "@/lib/game";
+import { createPrebakedGenerator } from "@/lib/game";
 
-const PLATE = ["I", "II", "III", "IV", "V"];
+// three.js has no business in the server bundle.
+const Scene = dynamic(() => import("@/components/Scene"), {
+  ssr: false,
+  loading: () => <div className="sf-loading">Building the world…</div>,
+});
+
+const PLATE = ["I", "II", "III"];
 
 export default function PlayPage() {
   const game = useGame({ generate: createPrebakedGenerator({ delayMs: 1400 }) });
   const { state, secondsLeft, harvestProgress } = game;
-  const { pose } = useCharacterPose(state);
 
   const [caption, setCaption] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
   const level = state.level;
-  const tool = level?.solution.tool;
-  const fruitModel = fruitModelFor(level?.harvest.fruit);
-
-  // Character walks left to right; pose.x runs 0..6 across the crossing.
-  const journey = Math.min(1, Math.max(0, pose.position.x / 6));
-  const crossed = state.phase === "harvesting" || state.phase === "cleared";
 
   useEffect(() => {
     if (state.phase === "sketching") {
@@ -45,148 +36,83 @@ export default function PlayPage() {
     }
   }, [state.phase]);
 
-  // Fruit scatter is deterministic per level, so it does not reshuffle on
-  // every render while the player is picking.
-  const scatter = useMemo(() => {
-    const count = level?.harvest.spawnCount ?? 0;
-    return Array.from({ length: count }, (_, i) => {
-      const a = Math.sin(i * 12.9898) * 43758.5453;
-      const b = Math.sin(i * 78.233) * 12345.6789;
-      return {
-        left: 58 + (a - Math.floor(a)) * 34,
-        bottom: 26 + (b - Math.floor(b)) * 34,
-        drift: (i % 5) * 0.4,
-      };
-    });
-  }, [level?.harvest.spawnCount, level?.id]);
-
-  const showTool = ["traversing", "harvesting", "cleared"].includes(state.phase);
   const urgent = state.phase === "harvesting" && harvestProgress < 0.3;
+  const last = state.scores[state.scores.length - 1];
 
   return (
     <>
-      <Script
-        type="module"
-        src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"
-        strategy="afterInteractive"
-      />
       <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Spline+Sans:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Spline+Sans:wght@400;500;600&display=swap"
         rel="stylesheet"
       />
-
       <style>{css}</style>
 
       <main className="sf">
-        {/* ---------------- Header ---------------- */}
-        <header className="sf-head">
-          <div className="sf-plate">
+        <div className="sf-world">
+          <Scene state={state} onPick={game.pick} />
+        </div>
+
+        {/* ---------------- top bar ---------------- */}
+        <header className="sf-top">
+          <div className="sf-chip">
             {level ? (
               <>
                 <span className="sf-numeral">{PLATE[state.levelIndex]}</span>
-                <span className="sf-levelname">{level.name}</span>
+                {level.name}
               </>
             ) : (
-              <span className="sf-levelname">Spatial Forge</span>
+              "Spatial Forge"
             )}
           </div>
 
-          <div className="sf-tally">
+          <div className="sf-chip sf-chip--score">
             {state.scores.map((s) => (
-              <span key={s.levelId} className="sf-pip" title={`Level ${s.levelId}: ${s.total}`} />
+              <span key={s.levelId} className="sf-pip" />
             ))}
-            <span className="sf-score">{state.totalScore}</span>
+            <span className="sf-scorenum">{state.totalScore}</span>
           </div>
         </header>
 
-        {/* ---------------- Scene ---------------- */}
-        <section className="sf-scene">
-          <Obstacle id={level?.obstacle.id} solved={crossed || state.phase === "traversing"} />
-
-          {/* The generated object, seated in the gap it solves. */}
-          {showTool && tool && (
-            <div className={`sf-tool sf-tool--${tool}`}>
-              <model-viewer
-                src={state.sketch?.modelUrl?.startsWith("/") ? state.sketch.modelUrl : PREBAKED_MODELS[tool]}
-                alt={level?.solution.label ?? ""}
-                disable-zoom
-                interaction-prompt="none"
-              />
+        {/* ---------------- countdown ---------------- */}
+        {state.phase === "harvesting" && (
+          <div className={`sf-clock ${urgent ? "is-urgent" : ""}`}>
+            <div className="sf-seconds">{secondsLeft}</div>
+            <div className="sf-ring">
+              <div className="sf-ring-fill" style={{ width: `${harvestProgress * 100}%` }} />
             </div>
-          )}
-
-          {/* Fruit. Each one is a target. */}
-          {state.phase === "harvesting" &&
-            fruitModel &&
-            scatter.slice(0, state.harvest.remaining).map((f, i) => (
-              <button
-                key={i}
-                className="sf-fruit"
-                style={{
-                  left: `${f.left}%`,
-                  bottom: `${f.bottom}%`,
-                  animationDelay: `${f.drift}s`,
-                }}
-                onClick={game.pick}
-                aria-label={`Pick ${level?.harvest.label}`}
-              >
-                <model-viewer src={fruitModel} alt="" disable-zoom interaction-prompt="none" />
-              </button>
-            ))}
-
-          {/* Character. */}
-          <div
-            className="sf-walker"
-            style={{
-              left: `${8 + journey * 62}%`,
-              transform: `translateY(${-pose.position.y * 70}px) rotate(${pose.tilt}rad) scale(${pose.scale.x}, ${pose.scale.y})`,
-            }}
-          >
-            <model-viewer src={CHARACTER_MODEL} alt="" disable-zoom interaction-prompt="none" />
+            <div className="sf-count">
+              {state.harvest.picked} · {state.harvest.remaining} left
+            </div>
           </div>
+        )}
 
-          <div className="sf-ground" />
-
-          {/* Countdown lives over the scene so eyes stay on the fruit. */}
-          {state.phase === "harvesting" && (
-            <div className={`sf-clock ${urgent ? "is-urgent" : ""}`}>
-              <span className="sf-seconds">{secondsLeft}</span>
-              <span className="sf-picked">
-                {state.harvest.picked} picked
-              </span>
-              <div className="sf-bar">
-                <div className="sf-bar-fill" style={{ width: `${harvestProgress * 100}%` }} />
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* ---------------- Prompt ---------------- */}
-        <footer className="sf-foot">
+        {/* ---------------- prompt ---------------- */}
+        <footer className="sf-bottom">
           {state.phase === "idle" && (
-            <Panel>
-              <p className="sf-lede">
+            <Card>
+              <h1 className="sf-title">Spatial Forge</h1>
+              <p className="sf-body">
                 Three crossings stand between you and the watermelon. Draw what gets you over.
               </p>
-              <button className="sf-btn sf-btn--go" onClick={game.start}>
+              <button className="sf-btn" onClick={game.start}>
                 Set out
               </button>
-            </Panel>
+            </Card>
           )}
 
           {(state.phase === "briefing" || state.phase === "rejected") && level && (
-            <Panel>
-              <p className="sf-brief">{level.obstacle.brief}</p>
-              {state.rejection && <p className="sf-note">{state.rejection}</p>}
-              {state.error && <p className="sf-note sf-note--bad">{state.error}</p>}
-              <button className="sf-btn sf-btn--go" onClick={game.openSketchbook}>
+            <Card>
+              <p className="sf-body">{level.obstacle.brief}</p>
+              {state.rejection && <p className="sf-hint">{state.rejection}</p>}
+              {state.error && <p className="sf-hint sf-hint--bad">{state.error}</p>}
+              <button className="sf-btn" onClick={game.openSketchbook}>
                 {state.attempts > 0 ? "Draw again" : "Draw something"}
               </button>
-            </Panel>
+            </Card>
           )}
 
           {state.phase === "sketching" && level && (
-            <Panel>
+            <Card>
               <label className="sf-label" htmlFor="caption">
                 What did you draw?
               </label>
@@ -202,46 +128,50 @@ export default function PlayPage() {
                   autoComplete="off"
                 />
                 <button
-                  className="sf-btn sf-btn--go"
+                  className="sf-btn"
                   onClick={() => game.submitSketch(caption)}
                   disabled={!caption.trim()}
                 >
                   Build it
                 </button>
               </div>
-            </Panel>
+            </Card>
           )}
 
           {state.phase === "generating" && (
-            <Panel>
-              <p className="sf-brief sf-shimmer">Forging {caption || "your object"}…</p>
-            </Panel>
+            <Card>
+              <p className="sf-body sf-pulse">Forging {caption || "your object"}…</p>
+            </Card>
           )}
 
           {state.phase === "traversing" && level && (
-            <Panel>
-              <p className="sf-brief">Crossing {level.obstacle.label}.</p>
-            </Panel>
+            <Card>
+              <p className="sf-body">Crossing {level.obstacle.label}.</p>
+            </Card>
           )}
 
-          {state.phase === "cleared" && (
-            <Panel>
-              <Tally score={state.scores[state.scores.length - 1]} />
-              <button className="sf-btn sf-btn--go" onClick={game.nextLevel}>
+          {state.phase === "cleared" && last && (
+            <Card>
+              <div className="sf-tally">
+                <span>{last.picked} picked</span>
+                <span className="sf-dim">{last.fruitPoints}</span>
+                {last.retryPenalty > 0 && <span className="sf-minus">−{last.retryPenalty}</span>}
+                <strong className="sf-big">{last.total}</strong>
+              </div>
+              <button className="sf-btn" onClick={game.nextLevel}>
                 {state.levelIndex < 2 ? "Onward" : "Finish"}
               </button>
-            </Panel>
+            </Card>
           )}
 
           {state.phase === "finished" && (
-            <Panel>
-              <p className="sf-lede">
-                You made it across all three. {state.totalScore} points in the sack.
-              </p>
-              <button className="sf-btn sf-btn--go" onClick={game.reset}>
+            <Card>
+              <h1 className="sf-title">{state.totalScore}</h1>
+              <p className="sf-body">All three crossings behind you.</p>
+              <button className="sf-btn" onClick={game.reset}>
                 Go again
               </button>
-            </Panel>
+            </Card>
           )}
         </footer>
       </main>
@@ -249,232 +179,155 @@ export default function PlayPage() {
   );
 }
 
-function Panel({ children }: { children: React.ReactNode }) {
-  return <div className="sf-panel">{children}</div>;
-}
-
-function Tally({ score }: { score?: { picked: number; fruitPoints: number; retryPenalty: number; total: number } }) {
-  if (!score) return null;
-  return (
-    <div className="sf-tallyrow">
-      <span>{score.picked} picked</span>
-      <span className="sf-dim">{score.fruitPoints}</span>
-      {score.retryPenalty > 0 && <span className="sf-minus">−{score.retryPenalty}</span>}
-      <strong className="sf-total">{score.total}</strong>
-    </div>
-  );
-}
-
-/** Obstacles are drawn rather than modelled — cheap, and they read instantly. */
-function Obstacle({ id, solved }: { id?: ObstacleId; solved: boolean }) {
-  if (!id) return null;
-
-  if (id === "crest") {
-    return (
-      <svg className="sf-obstacle" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden>
-        <path d="M150 200 L215 40 L280 200 Z" fill="#2C3547" />
-        <path d="M215 40 L245 118 L280 200 Z" fill="#39445A" />
-        <path d="M150 200 L215 40 L280 200" fill="none" stroke="#5A6A88" strokeWidth="2" />
-      </svg>
-    );
-  }
-
-  const wide = id === "lake";
-  return (
-    <svg className="sf-obstacle" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden>
-      <rect x={wide ? 150 : 175} y="150" width={wide ? 190 : 110} height="50" fill="#1D2939" />
-      <g opacity={solved ? 0.5 : 1}>
-        <path
-          d={`M${wide ? 158 : 182} 168 q14 -7 28 0 t28 0 t28 0 t28 0 ${wide ? "t28 0 t28 0" : ""}`}
-          fill="none"
-          stroke="#4E7C93"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-        <path
-          d={`M${wide ? 164 : 188} 184 q14 -6 28 0 t28 0 t28 0 ${wide ? "t28 0 t28 0" : ""}`}
-          fill="none"
-          stroke="#3D6478"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </g>
-    </svg>
-  );
+function Card({ children }: { children: React.ReactNode }) {
+  return <div className="sf-card">{children}</div>;
 }
 
 const css = `
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; overflow: hidden; }
+
 .sf {
-  --ink: #E4E9F0;
-  --dusk-far: #3A4763;
-  --dusk-near: #202838;
-  --earth: #171D28;
-  --ember: #D9552F;
-  --persimmon: #E88B45;
-  --rule: rgba(228,233,240,.16);
-  min-height: 100vh;
-  background: var(--earth);
-  color: var(--ink);
+  --ink: #17212B;
+  --paper: #FFFFFF;
+  --sun: #FFC63D;
+  --leaf: #4CAF3D;
+  --berry: #E8503A;
+  position: fixed;
+  inset: 0;
   font-family: "Spline Sans", ui-sans-serif, system-ui, sans-serif;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  color: var(--ink);
+  user-select: none;
 }
 
-.sf-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 20px 32px 14px;
-  border-bottom: 1px solid var(--rule);
-}
-.sf-plate { display: flex; align-items: baseline; gap: 14px; }
-.sf-numeral {
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 15px;
-  color: var(--ember);
-  letter-spacing: .1em;
-}
-.sf-levelname {
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 26px;
-  font-weight: 600;
-}
-.sf-tally { display: flex; align-items: center; gap: 8px; }
-.sf-pip { width: 7px; height: 7px; border-radius: 50%; background: var(--persimmon); }
-.sf-score {
-  font-variant-numeric: tabular-nums;
-  font-size: 20px;
-  margin-left: 8px;
-  font-weight: 600;
+.sf-world { position: absolute; inset: 0; }
+.sf-loading {
+  display: grid; place-items: center; height: 100%;
+  background: #8FD3F4; color: #17212B;
+  font-family: "Baloo 2", cursive; font-size: 22px;
 }
 
-.sf-scene {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(180deg, var(--dusk-far) 0%, var(--dusk-near) 62%, var(--earth) 100%);
-  min-height: 58vh;
+/* ---------- chips ---------- */
+.sf-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 18px 20px; pointer-events: none;
 }
-.sf-ground {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
-  background: var(--earth);
-  border-top: 1px solid rgba(228,233,240,.1);
+.sf-chip {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 9px 20px;
+  font-family: "Baloo 2", cursive;
+  font-size: 18px; font-weight: 700;
+  box-shadow: 0 4px 0 rgba(23,33,43,.18);
 }
-.sf-obstacle {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  width: 100%; height: 46%;
-}
+.sf-numeral { color: var(--berry); font-size: 15px; }
+.sf-chip--score { gap: 6px; }
+.sf-pip { width: 9px; height: 9px; border-radius: 50%; background: var(--leaf); }
+.sf-scorenum { font-variant-numeric: tabular-nums; margin-left: 4px; }
 
-.sf-walker {
-  position: absolute; bottom: 20%;
-  width: 120px; height: 150px;
-  transform-origin: 50% 100%;
-  transition: left .12s linear;
-  z-index: 3;
-  pointer-events: none;
-}
-.sf-walker model-viewer { width: 100%; height: 100%; }
-
-.sf-tool { position: absolute; bottom: 19%; z-index: 2; pointer-events: none; }
-.sf-tool model-viewer { width: 100%; height: 100%; }
-.sf-tool--bridge { left: 40%; width: 220px; height: 130px; }
-.sf-tool--ladder { left: 47%; bottom: 22%; width: 150px; height: 210px; }
-.sf-tool--boat   { left: 42%; width: 220px; height: 140px; }
-
-.sf-fruit {
-  position: absolute;
-  width: 54px; height: 54px;
-  padding: 0; border: 0; background: none;
-  cursor: pointer;
-  z-index: 4;
-  animation: sf-hang 3.4s ease-in-out infinite;
-  border-radius: 50%;
-}
-.sf-fruit model-viewer { width: 100%; height: 100%; pointer-events: none; }
-.sf-fruit:hover { transform: scale(1.12); }
-.sf-fruit:focus-visible { outline: 2px solid var(--persimmon); outline-offset: 4px; }
-@keyframes sf-hang {
-  0%, 100% { translate: 0 0; }
-  50%      { translate: 0 -6px; }
-}
-
+/* ---------- countdown ---------- */
 .sf-clock {
-  position: absolute; top: 22px; right: 28px;
-  text-align: right;
-  z-index: 5;
+  position: absolute; top: 74px; right: 20px;
+  text-align: center; pointer-events: none;
+  background: var(--paper);
+  border-radius: 20px;
+  padding: 12px 18px 14px;
+  box-shadow: 0 5px 0 rgba(23,33,43,.18);
+  min-width: 128px;
 }
 .sf-seconds {
-  display: block;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 52px;
-  line-height: 1;
+  font-family: "Baloo 2", cursive;
+  font-size: 46px; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.sf-picked { font-size: 13px; opacity: .7; }
-.sf-bar { width: 130px; height: 3px; background: rgba(228,233,240,.18); margin-top: 8px; margin-left: auto; }
-.sf-bar-fill { height: 100%; background: var(--persimmon); transition: width .1s linear; }
-.sf-clock.is-urgent .sf-seconds { color: var(--ember); }
-.sf-clock.is-urgent .sf-bar-fill { background: var(--ember); }
+.sf-ring { height: 6px; background: rgba(23,33,43,.12); border-radius: 3px; margin: 8px 0 6px; overflow: hidden; }
+.sf-ring-fill { height: 100%; background: var(--leaf); border-radius: 3px; transition: width .1s linear; }
+.sf-count { font-size: 12px; opacity: .6; }
+.sf-clock.is-urgent { animation: sf-shake .5s ease-in-out infinite; }
+.sf-clock.is-urgent .sf-seconds { color: var(--berry); }
+.sf-clock.is-urgent .sf-ring-fill { background: var(--berry); }
+@keyframes sf-shake {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
 
-.sf-foot { padding: 20px 32px 30px; border-top: 1px solid var(--rule); }
-.sf-panel { max-width: 620px; }
-.sf-lede { font-family: "Fraunces", Georgia, serif; font-size: 21px; margin: 0 0 16px; line-height: 1.45; }
-.sf-brief { font-size: 16px; margin: 0 0 16px; line-height: 1.6; opacity: .9; max-width: 52ch; }
-.sf-note { font-size: 15px; margin: 0 0 16px; color: var(--persimmon); line-height: 1.55; max-width: 52ch; }
-.sf-note--bad { color: var(--ember); }
-.sf-label { display: block; font-size: 13px; opacity: .65; margin-bottom: 8px; }
+/* ---------- prompt card ---------- */
+.sf-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; justify-content: center;
+  padding: 0 20px 26px;
+  pointer-events: none;
+}
+.sf-card {
+  pointer-events: auto;
+  background: var(--paper);
+  border-radius: 22px;
+  padding: 22px 26px;
+  width: min(560px, 100%);
+  box-shadow: 0 6px 0 rgba(23,33,43,.18);
+}
+.sf-title {
+  font-family: "Baloo 2", cursive;
+  font-size: 34px; font-weight: 800;
+  margin: 0 0 8px;
+}
+.sf-body { font-size: 16px; line-height: 1.55; margin: 0 0 16px; }
+.sf-hint { font-size: 15px; line-height: 1.5; margin: 0 0 16px; color: #B8541F; }
+.sf-hint--bad { color: var(--berry); }
+.sf-label { display: block; font-size: 13px; opacity: .6; margin-bottom: 8px; }
 .sf-row { display: flex; gap: 10px; }
 
 .sf-input {
   flex: 1;
-  background: rgba(228,233,240,.06);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  padding: 11px 14px;
+  border: 2px solid rgba(23,33,43,.14);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font: inherit; font-size: 16px;
   color: var(--ink);
-  font: inherit;
-  font-size: 16px;
+  background: #F7F9FA;
 }
-.sf-input::placeholder { color: rgba(228,233,240,.34); }
-.sf-input:focus { outline: none; border-color: var(--persimmon); }
+.sf-input:focus { outline: none; border-color: var(--leaf); background: #fff; }
 
 .sf-btn {
-  border: 1px solid var(--rule);
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: 15px;
-  padding: 11px 22px;
-  border-radius: 3px;
+  font-family: "Baloo 2", cursive;
+  font-size: 18px; font-weight: 700;
+  color: #fff;
+  background: var(--leaf);
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 28px;
   cursor: pointer;
+  box-shadow: 0 4px 0 #37892C;
+  transition: transform .06s, box-shadow .06s;
 }
-.sf-btn:hover { border-color: var(--ink); }
-.sf-btn:focus-visible { outline: 2px solid var(--persimmon); outline-offset: 2px; }
-.sf-btn--go { background: var(--ember); border-color: var(--ember); color: #fff; font-weight: 500; }
-.sf-btn--go:hover { background: #E4653E; border-color: #E4653E; }
-.sf-btn:disabled { opacity: .4; cursor: not-allowed; }
+.sf-btn:hover { filter: brightness(1.05); }
+.sf-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #37892C; }
+.sf-btn:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+.sf-btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: 0 4px 0 #37892C; }
 
-.sf-tallyrow {
+.sf-tally {
   display: flex; align-items: baseline; gap: 14px;
-  font-size: 16px; margin-bottom: 18px;
+  font-size: 16px; margin-bottom: 16px;
   font-variant-numeric: tabular-nums;
 }
-.sf-dim { opacity: .55; }
-.sf-minus { color: var(--ember); }
-.sf-total { font-family: "Fraunces", Georgia, serif; font-size: 30px; }
+.sf-dim { opacity: .5; }
+.sf-minus { color: var(--berry); }
+.sf-big { font-family: "Baloo 2", cursive; font-size: 32px; margin-left: auto; }
 
-.sf-shimmer { animation: sf-pulse 1.6s ease-in-out infinite; }
-@keyframes sf-pulse { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+.sf-pulse { animation: sf-fade 1.5s ease-in-out infinite; }
+@keyframes sf-fade { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .sf-fruit, .sf-shimmer { animation: none; }
-  .sf-walker { transition: none; }
+  .sf-pulse, .sf-clock.is-urgent { animation: none; }
 }
 
-@media (max-width: 720px) {
-  .sf-head, .sf-foot { padding-left: 18px; padding-right: 18px; }
-  .sf-levelname { font-size: 21px; }
-  .sf-seconds { font-size: 40px; }
+@media (max-width: 640px) {
   .sf-row { flex-direction: column; }
-  .sf-walker { width: 90px; height: 115px; }
+  .sf-seconds { font-size: 36px; }
+  .sf-clock { min-width: 104px; padding: 10px 14px 12px; }
+  .sf-title { font-size: 27px; }
 }
 `;
