@@ -276,14 +276,6 @@
       },
       "url": "https://packages.unity.com"
     },
-    "com.unity_39780f5c777fee1e1322.com.unity.cloud.gltfast": {
-      "version": "file:com.unity_39780f5c777fee1e1322.com.unity.cloud.gltfast",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.test-framework": "1.6.0"
-      }
-    },
     "com.unity.modules.accessibility": {
       "version": "1.0.0",
       "depth": 0,
